@@ -30,6 +30,34 @@ exports.getFileFromUser = () => {
     openFile(file);
 }
 
+exports.saveMarkdownFile = (file, content) => {
+    // 无文件路径则认为是新建文件
+    if (!file) {
+        file = dialog.showSaveDialog({
+            title: 'Save File',
+            defaultPath: app.getPath('documents'),
+            filters: [
+                {
+                    name: 'Save Markdowm',
+                    extensions: ['md', 'mdown', 'markdown', 'marcdown']
+                }
+            ]
+        })
+    }
+
+    // 没有选择存储路径
+    if (!file) return;
+
+    // 写入新文件
+    fs.writeFileSync(file, content);
+    
+    // 打开新文件
+    openFile(file);
+
+    // 返回新建文件的目录
+    return file;
+}
+
 const openFile = (file) => {
     const content = fs.readFileSync(file).toString();
 

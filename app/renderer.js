@@ -12,6 +12,7 @@ const APP_STATES = {
   title: CONST_VARIABLES.TITLE,
   isEdited: false,
   originalContent: '',
+  currentContent: '',
   file: null
 };
 
@@ -56,14 +57,16 @@ const editedTitleCal = isEdited => {
   return `${APP_STATES.title}  ●`;
 };
 
+
+/** view events **/
 markdownView.addEventListener('keyup', event => {
   const currentContent = event.target.value;
   const isEdited = currentContent !== APP_STATES.originalContent;
 
   renderMarkdownToHtml(currentContent);
   updateStates({
-    key: ['isEdited', 'title'],
-    value: [isEdited, editedTitleCal(isEdited)]
+    key: ['isEdited', 'title', 'currentContent'],
+    value: [isEdited, editedTitleCal(isEdited), currentContent]
   });
   updateInterface(currentWindow);
 });
@@ -73,14 +76,20 @@ openFileButton.addEventListener('click', event => {
   mainProcess.getFileFromUser();
 })
 
+saveMarkdownButton.addEventListener('click', () => {
+  const { file, currentContent } = APP_STATES;
+  mainProcess.saveMarkdownFile(file, currentContent);
+})
+
+/** main proecess events **/
 ipcRenderer.on('file-opened', (event, file, content) => {
   markdownView.value = content;
   renderMarkdownToHtml(content);
 
   const title =`${path.basename(file)} - ${CONST_VARIABLES.TITLE}`;
   updateStates({
-    key: ['originalContent', 'title', 'file'],
-    value: [content, title, file]
+    key: ['originalContent', 'title', 'file', 'isEdited'],
+    value: [content, title, file, false]
   });
   updateInterface(currentWindow);
 })
