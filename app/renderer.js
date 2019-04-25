@@ -38,7 +38,7 @@ const updateInterface = (currWindow) => {
   saveMarkdownButton.disabled = !APP_STATES.isEdited;
   revertButton.disabled = !APP_STATES.isEdited;
 
-  currWindow.setRepresentedFilename(APP_STATES.file);
+  APP_STATES.file && currWindow.setRepresentedFilename(APP_STATES.file);
   currWindow.setDocumentEdited(APP_STATES.isEdited);
 };
 
@@ -57,6 +57,23 @@ const editedTitleCal = isEdited => {
   return `${APP_STATES.title}  ●`;
 };
 
+const cleanDragDropTipsClass = () => {
+  markdownView.classList.remove('drag-over');
+  markdownView.classList.remove('drag-error');
+};
+
+const fileTypeSupported = file => {
+  // 拖拽方法无法识别到 md 文件的类型，预期可以获得 'text/markdown'
+  return ['text/plain', ''].includes(file.type);
+};
+
+const getDraggedFile = event => {
+  return event.dataTransfer.items[0];
+};
+
+const getDroppedFile = event => {
+  return event.dataTransfer.items[0].getAsFile();
+};
 
 /** view events **/
 markdownView.addEventListener('keyup', event => {
@@ -81,6 +98,41 @@ saveMarkdownButton.addEventListener('click', () => {
   mainProcess.saveMarkdownFile(file, currentContent);
 })
 
+saveHtmlButton.addEventListener('click', () => {
+  const htmlContent = htmlView.innerHTML;
+  mainProcess.saveHtml(htmlContent);
+})
+
+/** stopProopagtion for document **/
+document.addEventListener('dragstart', event => event.preventDefault());
+document.addEventListener('dragover', event => event.preventDefault());
+document.addEventListener('dragleave', event => event.preventDefault());
+document.addEventListener('drop', event => event.preventDefault());
+
+markdownView.addEventListener('dragover', event => {
+  const file = getDraggedFile(event);
+  
+  const supported = fileTypeSupported(file);
+  if (supported) {
+    markdownView.classList.add('drag-over');
+  } else {
+    markdownView.classList.add('drag-error');
+  }
+})
+
+markdownView.addEventListener('dragleave', event => {
+  cleanDragDropTipsClass();
+})
+
+markdownView.addEventListener('drop', event => {
+  const file = getDroppedFile(event);
+
+  cleanDragDropTipsClass();
+  mainProcess.openFile(file.path);
+
+})
+
+
 /** main proecess events **/
 ipcRenderer.on('file-opened', (event, file, content) => {
   markdownView.value = content;
@@ -92,4 +144,4 @@ ipcRenderer.on('file-opened', (event, file, content) => {
     value: [content, title, file, false]
   });
   updateInterface(currentWindow);
-})
+});
