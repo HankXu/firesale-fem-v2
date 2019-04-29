@@ -1,6 +1,8 @@
 const fs = require('fs');
 
-const { app, BrowserWindow, dialog } = require('electron');
+const { app, BrowserWindow, dialog, Menu } = require('electron');
+
+const { getMenuTemplate } = require('./menu.model');
 
 let mainWindow = null;
 
@@ -9,11 +11,16 @@ app.on('ready', () => {
 
     mainWindow.loadFile(`${__dirname}/index.html`);
 
-    // getFileFromUser();
-
+    const menuTempl = getMenuTemplate(process.platform);
+    setMenuClick(menuTempl);
+    const appMenuTempl = Menu.buildFromTemplate(menuTempl);
+    Menu.setApplicationMenu(appMenuTempl);
     mainWindow.once('ready-to-show', () => mainWindow.show());
 });
 
+exports.getMainWindow = () => {
+    return this.mainWindow;
+}
 exports.getFileFromUser = () => {
     const files = dialog.showOpenDialog(mainWindow, {
         properties: ['openFile'],
@@ -79,3 +86,26 @@ const openFile = (exports.openFile = (file) => {
     mainWindow.webContents.send('file-opened', file, content);
 });
 
+setMenuClick = (menus) => {
+    menus.forEach(item => {
+        if (item.submenu) {
+            item.submenu.forEach(item => {
+                if (typeof menuClickFunc[item.label] === 'function') {
+                    item.click = menuClickFunc[item.label];
+                }
+            })
+        }
+    })
+}
+
+const menuClickFunc = {
+    'Open...': () => {
+        this.getFileFromUser();
+    },
+    'Save...': () => {
+        mainWindow.webContents.send('save-markdown');
+    },
+    'Save Html': () => {
+        mainWindow.webContents.send('save-html')
+    }
+}

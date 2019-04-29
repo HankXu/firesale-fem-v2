@@ -5,6 +5,7 @@
   "main": "app/main.js",
   "dependencies": {
     "electron": "^3.0.10",
+    "electron-prebuilt-compile": "^4.0.0",
     "marked": "^0.5.2"
   },
   "devDependencies": {

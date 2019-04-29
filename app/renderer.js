@@ -1,6 +1,6 @@
 const path = require('path');
 const marked = require('marked');
-const { remote, ipcRenderer } = require('electron');
+const { remote, ipcRenderer, shell } = require('electron');
 const mainProcess = remote.require('./main.js');
 const currentWindow = remote.getCurrentWindow();
 
@@ -27,6 +27,8 @@ const revertButton = document.querySelector('#revert');
 const saveHtmlButton = document.querySelector('#save-html');
 const showFileButton = document.querySelector('#show-file');
 const openInDefaultButton = document.querySelector('#open-in-default');
+const deleteFileButton = document.querySelector('#delete-file');
+
 
 const renderMarkdownToHtml = markdown => {
   htmlView.innerHTML = marked(markdown, { sanitize: true });
@@ -37,6 +39,9 @@ const updateInterface = (currWindow) => {
   // 按钮可用性修改
   saveMarkdownButton.disabled = !APP_STATES.isEdited;
   revertButton.disabled = !APP_STATES.isEdited;
+  showFileButton.disabled = !APP_STATES.file;
+  openInDefaultButton.disabled = !APP_STATES.file;
+  deleteFileButton.disabled = !APP_STATES.file;
 
   APP_STATES.file && currWindow.setRepresentedFilename(APP_STATES.file);
   currWindow.setDocumentEdited(APP_STATES.isEdited);
@@ -75,6 +80,18 @@ const getDroppedFile = event => {
   return event.dataTransfer.items[0].getAsFile();
 };
 
+/** event callbacks  */
+
+const saveMarkdown = () => {
+  const { file, currentContent } = APP_STATES;
+  mainProcess.saveMarkdownFile(file, currentContent);
+}
+
+const saveHtml = () => {
+  const htmlContent = htmlView.innerHTML;
+  mainProcess.saveHtml(htmlContent);
+}
+
 /** view events **/
 markdownView.addEventListener('keyup', event => {
   const currentContent = event.target.value;
@@ -93,14 +110,26 @@ openFileButton.addEventListener('click', event => {
   mainProcess.getFileFromUser();
 })
 
-saveMarkdownButton.addEventListener('click', () => {
-  const { file, currentContent } = APP_STATES;
-  mainProcess.saveMarkdownFile(file, currentContent);
+saveMarkdownButton.addEventListener('click', saveMarkdown);
+
+saveHtmlButton.addEventListener('click', saveHtml)
+
+showFileButton.addEventListener('click', () => {
+  if (!APP_STATES.file) return;
+
+  shell.showItemInFolder(APP_STATES.file);
 })
 
-saveHtmlButton.addEventListener('click', () => {
-  const htmlContent = htmlView.innerHTML;
-  mainProcess.saveHtml(htmlContent);
+openInDefaultButton.addEventListener('click', () => {
+  if (!APP_STATES.file) return;
+
+  shell.openItem(APP_STATES.file);
+})
+
+deleteFileButton.addEventListener('click', () => {
+  if (!APP_STATES.file) return;
+
+  shell.moveItemToTrash(APP_STATES.file);
 })
 
 /** stopProopagtion for document **/
@@ -145,3 +174,11 @@ ipcRenderer.on('file-opened', (event, file, content) => {
   });
   updateInterface(currentWindow);
 });
+
+ipcRenderer.on('save-markdown', (event) => {
+  saveMarkdown();
+})
+
+ipcRenderer.on('save-html', (event) => {
+  saveHtml();
+})
